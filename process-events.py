@@ -36,6 +36,8 @@ while(True):
     start = time.time()
 
     for event in datastore:
+
+        # Check if the event has already been seen
         if event["id"] in event_set:
             continue
         else:
@@ -44,6 +46,7 @@ while(True):
         print(event["type"])
 
         # Define stream url. Since response for Issues is different, different stream must be used
+        # Port 8081 for issue events and 8082 for regular events
         streamUrl = 'http://localhost:8081/GithubEvents' if "Issue" in event["type"] else 'http://localhost:8082/GithubEvents'
         print("Posting event to {} stream".format(streamUrl))
 
