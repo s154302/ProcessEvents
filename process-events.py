@@ -5,6 +5,7 @@ from urllib import request, parse, error
 owner = "s154302"
 repo = "ProcessEvents"
 Etag = ""
+event_set = set()
 while(True):
     try:
         # Github Events API is documented at https://developer.github.com/v3/activity/events/
@@ -35,6 +36,11 @@ while(True):
     start = time.time()
 
     for event in datastore:
+        if event["id"] in event_set:
+            continue
+        else:
+            event_set.add(event["id"])
+
         print(event["type"])
 
         # Define stream url. Since response for Issues is different, different stream must be used
