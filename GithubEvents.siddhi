@@ -1,0 +1,8 @@
+@App:name("GithubEvents")
+
+@source(type='http', receiver.url='http://localhost:8081/GithubEvents', @map(type='json'))
+define stream Issues(id string, type string, actor string, repo string, payload string, locked string, assignee string, assignees string, milestone string, comments int, created_at string, updated_at string, closed_at string, author_association string, body string, state string, comment string, public string);
+
+@source(type='http', receiver.url='http://localhost:8082/GithubEvents', @map(type='json'))
+@sink(type='log') 
+define stream Event (id string, type string, actor string, repo string, payload string, public string, created_at string)
