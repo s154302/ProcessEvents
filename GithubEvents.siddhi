@@ -33,14 +33,9 @@ define stream Event (
     publisher.url='http://127.0.0.1:8080/engine-rest/message', 
     headers='Host:127.0.0.1:8080', 
     @map(type='json', 
-        @payload("""{"processInstanceId" : "{{processInstanceID}}", "type" : "{{type}}", "payload" : "{{payload}}"}""")))
-define stream CreatedIssues(processInstanceID string, type string, payload string);
+        @payload("""{"type" : "{{type}}"}""")))
+define stream CreatedIssues(type string);
 
-
-
-
-
-
-
-
-
+from Issues[type == "IssueCreate"]
+select type as type
+insert into CreatedIssues;
