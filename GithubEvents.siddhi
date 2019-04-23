@@ -1,5 +1,9 @@
 @App:name("GithubEvents")
 
+@source(type='http', receiver.url='http://localhost:8083/GithubEvents', @map(type='json'))
+@sink(type='log')
+define stream CamundaInputStream(instanceID string);
+
 @source(type='http', receiver.url='http://localhost:8081/GithubEvents', @map(type='json'))
 define stream Issues(
     id string, 
@@ -29,13 +33,14 @@ define stream Event (
     public string, 
     created_at string);
 
-@sink(type='http', 
+@sink(type='http',
     publisher.url='http://127.0.0.1:8080/engine-rest/message', 
-    headers='Host:127.0.0.1:8080', 
-    @map(type='json', 
-        @payload("""{"type" : "{{type}}"}""")))
+    headers='Content-Type:application/json',
+    @map(type='json'), 
+    @payload("""{"messageName":"issue submitted","processInstanceId" : "{{type}}"}"""))
 define stream CreatedIssues(type string);
 
-from Issues[type == "IssueCreate"]
-select type as type
+
+from CamundaInputStream
+select instanceID as type
 insert into CreatedIssues;
