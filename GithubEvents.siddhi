@@ -1,8 +1,23 @@
 @App:name("GithubEvents")
 
+-- STREAMS --
+
+-- Stream that catches any non-issue events from GitHub --
+@source(type='http', receiver.url='http://localhost:8082/GithubEvents', @map(type='json'))
+define stream Event (
+    id string,
+    type string,
+    actor string,
+    repo string,
+    payload string,
+    public string,
+    created_at string);
+
+-- Stream that catches events sent by camunda to obtain instanceID --
 @source(type='http', receiver.url='http://localhost:8083/GithubEvents', @map(type='json'))
 define stream CamundaInputStream(instanceID string, issueName string);
 
+-- Stream that catches any issue related events from GitHub --
 @source(type='http', receiver.url='http://localhost:8081/GithubEvents', @map(type='json'))
 define stream Issues (
     id string, 
@@ -21,20 +36,10 @@ define stream Issues (
     comment string,
     public string);
     
-@source(type='inMemory', topic='issue-payload', @map(type='json'))
-@sink(type='log')
+-- Stream to filter relevant info from issue event --
 define stream IssuesPayload(action string, title string);
 
-@source(type='http', receiver.url='http://localhost:8082/GithubEvents', @map(type='json'))
-define stream Event (
-    id string,
-    type string,
-    actor string,
-    repo string,
-    payload string,
-    public string,
-    created_at string);
-
+-- Send message to Camunda that issue has been submitted --
 @sink(type='http',
     publisher.url='http://127.0.0.1:8080/engine-rest/message',
     headers='Content-Type:application/json',
@@ -42,12 +47,18 @@ define stream Event (
     @payload("""{"messageName":"implementation begun","processInstanceId" : "{{instanceId}}"}"""))
 define stream CreatedIssues(instanceId string);
 
+
+-- QUERIES --
+
+-- Get action and title from issue and insert into IssuesPayload stream --
 from Issues
 select 
     json:getString(json:toObject(payload), '$.action') as action,
     json:getString(json:getObject(json:toObject(payload), '$.issue'), '$.title') as title
 insert into IssuesPayload;
 
+-- Join IssuesPayload and CamundaInput streams and send any opened issues to Camunda process with given instance ID --
 from IssuesPayload as I join CamundaInputStream as C on I.title == C.issueName and I.action == 'opened'
-select C.instanceID as instanceId
+select 
+    C.instanceID as instanceId
 insert into CreatedIssues;
