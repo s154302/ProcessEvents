@@ -23,10 +23,9 @@ define stream Issues (
     
 @source(type='inMemory', topic='issue-payload', @map(type='json'))
 @sink(type='log')
-define stream IssuesPayload(action string, issue string);
+define stream IssuesPayload(action string, title string);
 
 @source(type='http', receiver.url='http://localhost:8082/GithubEvents', @map(type='json'))
-@sink(type='log')
 define stream Event (
     id string,
     type string,
@@ -43,12 +42,12 @@ define stream Event (
     @payload("""{"messageName":"implementation begun","processInstanceId" : "{{instanceId}}"}"""))
 define stream CreatedIssues(instanceId string);
 
-from Issues#json:tokenizeAsObject(payload, '$.payload')
+from Issues
 select 
-    json:getString(jsonElement, '$.action') as action,
-    json:getString(jsonElement, '$.issue') as issue
+    json:getString(json:toObject(payload), '$.action') as action,
+    json:getString(json:getObject(json:toObject(payload), '$.issue'), '$.title') as title
 insert into IssuesPayload;
 
-from IssuesPayload as I join CamundaInputStream as C on I.action == C.issueName
-select I.action as instanceId
+from IssuesPayload as I join CamundaInputStream as C on I.title == C.issueName and I.action == 'opened'
+select C.instanceID as instanceId
 insert into CreatedIssues;
