@@ -5,7 +5,7 @@
 define stream CamundaInputStream(instanceID string);
 
 @source(type='http', receiver.url='http://localhost:8081/GithubEvents', @map(type='json'))
-define stream Issues(
+define stream Issues (
     id string, 
     type string, 
     actor string, 
