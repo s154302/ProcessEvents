@@ -2,6 +2,7 @@
 
 -- STREAMS --
 
+
 -- Stream that catches any non-issue events from GitHub --
 @source(type='http', receiver.url='http://localhost:8082/GithubEvents', @map(type='json'))
 define stream Event (
