@@ -23,7 +23,7 @@
         <bpmn:extensionElements>
           <camunda:connector>
             <camunda:inputOutput>
-              <camunda:inputParameter name="url">http://localhost:8083/GithubEvents</camunda:inputParameter>
+              <camunda:inputParameter name="url">http://localhost:8083/GithubEvents/Camunda/Issue</camunda:inputParameter>
               <camunda:inputParameter name="method">POST</camunda:inputParameter>
               <camunda:inputParameter name="headers">
                 <camunda:map>
@@ -32,7 +32,7 @@
               </camunda:inputParameter>
               <camunda:inputParameter name="payload">{"instanceID":"${execution.getProcessInstanceId()}", "issueName":"${IssueName}"}</camunda:inputParameter>
             </camunda:inputOutput>
-            <camunda:connectorId>http-connector</camunda:connectorId>
+            <camunda:connectorId>submit-issue-connector</camunda:connectorId>
           </camunda:connector>
         </bpmn:extensionElements>
       </bpmn:messageEventDefinition>
@@ -53,7 +53,7 @@
     </bpmn:startEvent>
   </bpmn:process>
   <bpmn:process id="Developer" isExecutable="true">
-    <bpmn:startEvent id="IntermediateCatchEvent_16p9bm5" name="implementation begun" camunda:initiator="Team Leader">
+    <bpmn:startEvent id="IntermediateCatchEvent_16p9bm5" name="implementation begun">
       <bpmn:outgoing>SequenceFlow_104xmfa</bpmn:outgoing>
       <bpmn:messageEventDefinition messageRef="Message_0d0exor" />
     </bpmn:startEvent>
@@ -89,7 +89,22 @@
       <bpmn:incoming>SequenceFlow_1sn1avh</bpmn:incoming>
       <bpmn:outgoing>SequenceFlow_0ulxi1l</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:sendTask id="Task_1cz016i" name="request review" camunda:expression="${execution.getProcessEngineServices().getRuntimeService().createMessageCorrelation(&#34;receive review request&#34;).correlateWithResult()}">
+    <bpmn:sendTask id="Task_1cz016i" name="request review">
+      <bpmn:extensionElements>
+        <camunda:connector>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="url">http://localhost:8080/GithubEvents/Camunda/PullRequest</camunda:inputParameter>
+            <camunda:inputParameter name="method">POST</camunda:inputParameter>
+            <camunda:inputParameter name="headers">
+              <camunda:map>
+                <camunda:entry key="Content-Type">application/json</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="payload">{"instanceID":"${execution.getProcessInstanceId()}", "requestnum":"${pr}"}</camunda:inputParameter>
+          </camunda:inputOutput>
+          <camunda:connectorId>submit-pr-connector</camunda:connectorId>
+        </camunda:connector>
+      </bpmn:extensionElements>
       <bpmn:incoming>SequenceFlow_1x3fgsw</bpmn:incoming>
       <bpmn:outgoing>SequenceFlow_0t976s2</bpmn:outgoing>
     </bpmn:sendTask>
@@ -121,6 +136,7 @@
       <bpmn:extensionElements>
         <camunda:formData>
           <camunda:formField id="conflict" label="Merge conflicts?" type="string" defaultValue="yes" />
+          <camunda:formField id="pr" label="Pull Request Number" type="string" />
         </camunda:formData>
       </bpmn:extensionElements>
       <bpmn:incoming>SequenceFlow_06dys8o</bpmn:incoming>
@@ -165,18 +181,36 @@
     </bpmn:endEvent>
   </bpmn:process>
   <bpmn:process id="Reviewer" isExecutable="true">
-    <bpmn:startEvent id="StartEvent_1kag3mf" name="review request received" camunda:initiator="Developer">
+    <bpmn:startEvent id="StartEvent_1kag3mf" name="review request received">
       <bpmn:outgoing>SequenceFlow_01v2duy</bpmn:outgoing>
       <bpmn:messageEventDefinition messageRef="Message_0tcf0je" />
     </bpmn:startEvent>
     <bpmn:endEvent id="EndEvent_1f675zc" name="feedback given">
+      <bpmn:extensionElements />
       <bpmn:incoming>SequenceFlow_1886qlo</bpmn:incoming>
-      <bpmn:messageEventDefinition messageRef="Message_01bbhfz" camunda:expression="${execution.getProcessEngineServices().getRuntimeService().createMessageCorrelation(&#34;receive feedback&#34;).correlateWithResult()}" />
+      <bpmn:messageEventDefinition messageRef="Message_01bbhfz">
+        <bpmn:extensionElements>
+          <camunda:connector>
+            <camunda:inputOutput>
+              <camunda:inputParameter name="url">http://localhost:8080/GithubEvents/Camunda/PullRequest</camunda:inputParameter>
+              <camunda:inputParameter name="method">POST</camunda:inputParameter>
+              <camunda:inputParameter name="headers">
+                <camunda:map>
+                  <camunda:entry key="Content-Type">application/json</camunda:entry>
+                </camunda:map>
+              </camunda:inputParameter>
+              <camunda:inputParameter name="payload">{"instanceID":"${execution.getProcessInstanceId()}", "requestnum":"${pr}"}</camunda:inputParameter>
+            </camunda:inputOutput>
+            <camunda:connectorId>feedback-connector</camunda:connectorId>
+          </camunda:connector>
+        </bpmn:extensionElements>
+      </bpmn:messageEventDefinition>
     </bpmn:endEvent>
     <bpmn:userTask id="Task_0jss6el" name="Review Code">
       <bpmn:extensionElements>
         <camunda:formData>
           <camunda:formField id="Review" label="Code reviewed?" type="string" defaultValue="yes" />
+          <camunda:formField id="pr" label="Pull Request Number" type="string" />
         </camunda:formData>
       </bpmn:extensionElements>
       <bpmn:incoming>SequenceFlow_01v2duy</bpmn:incoming>
