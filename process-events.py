@@ -46,8 +46,8 @@ while(True):
         print(event["type"])
 
         # Define stream url. Since response for Issues is different, different stream must be used
-        # Port 8081 for issue events and 8082 for regular events
-        streamUrl = 'http://localhost:8081/GithubEvents' if "Issue" in event["type"] else 'http://localhost:8082/GithubEvents'
+        # /Github/Issues for issue events and /Github/Events for regular events
+        streamUrl = 'http://localhost:8080/GithubEvents/Github/Issues' if "Issue" in event["type"] else 'http://localhost:8080/GithubEvents/Github/Events'
         print("Posting event to {} stream".format(streamUrl))
 
         requestStream = request.Request(streamUrl)
