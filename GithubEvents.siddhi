@@ -1,10 +1,17 @@
 @App:name("GithubEvents")
 
--- STREAMS --
+
+-- HTTP STREAMS --
+-- Stream that catches events sent by camunda to obtain instanceID --
+@source(type='http', receiver.url='http://localhost:8080/GithubEvents/Camunda/Issue', @map(type='json'))
+define stream CamundaIssueStream(instanceID string, issueName string);
+
+@source(type='http', receiver.url='http://localhost:8080/GithubEvents/Camunda/PullRequest', @map(type='json'))
+define stream CamundaPullRequestStream(instanceID string, requestNum string);
 
 -- Stream that catches any non-issue events from GitHub --
-@source(type='http', receiver.url='http://localhost:8082/GithubEvents', @map(type='json'))
-define stream Event (
+@source(type='http', receiver.url='http://localhost:8080/GithubEvents/Github/Events', @map(type='json'))
+define stream Events (
     id string,
     type string,
     actor string,
@@ -13,12 +20,8 @@ define stream Event (
     public string,
     created_at string);
 
--- Stream that catches events sent by camunda to obtain instanceID --
-@source(type='http', receiver.url='http://localhost:8083/GithubEvents', @map(type='json'))
-define stream CamundaInputStream(instanceID string, issueName string);
-
 -- Stream that catches any issue related events from GitHub --
-@source(type='http', receiver.url='http://localhost:8081/GithubEvents', @map(type='json'))
+@source(type='http', receiver.url='http://localhost:8080/GithubEvents/Github/Issues', @map(type='json'))
 define stream Issues (
     id string, 
     type string, 
@@ -36,29 +39,82 @@ define stream Issues (
     comment string,
     public string);
     
--- Stream to filter relevant info from issue event --
-define stream IssuesPayload(action string, title string);
-
 -- Send message to Camunda that issue has been submitted --
 @sink(type='http',
     publisher.url='http://127.0.0.1:8080/engine-rest/message',
-    headers='Content-Type:application/json',
+    headers="'Host:127.0.0.1:8080",
     @map(type='json'),
-    @payload("""{"messageName":"implementation begun","processInstanceId" : "{{instanceId}}"}"""))
-define stream CreatedIssues(instanceId string);
+    @payload("""{"messageName":"{{message}}","processInstanceId" : "{{instanceId}}"}"""))
+define stream MessageStream(instanceId string, message string);
+
+
+-- INTERMEDIATE STREAMS --    
+-- Stream to filter relevant info from issue event --
+define stream IssuesPayload(action string, title string);
+
+-- Stream to filter all comments on issues --
+define stream IssuesCommentStream(action string, number string);
+
+-- Stream to filter relevant info from a pull request event --
+define stream PullRequestPayload(action string, number string);
 
 
 -- QUERIES --
 
 -- Get action and title from issue and insert into IssuesPayload stream --
-from Issues
+from Issues[type == 'IssuesEvent']
 select 
     json:getString(json:toObject(payload), '$.action') as action,
     json:getString(json:getObject(json:toObject(payload), '$.issue'), '$.title') as title
 insert into IssuesPayload;
 
--- Join IssuesPayload and CamundaInput streams and send any opened issues to Camunda process with given instance ID --
-from IssuesPayload as I join CamundaInputStream as C on I.title == C.issueName and I.action == 'opened'
+-- Get comment events for issues --
+from Issues[type == 'IssueCommentEvent']
 select 
-    C.instanceID as instanceId
-insert into CreatedIssues;
+    json:getString(json:toObject(payload), '$.action') as action,
+    json:getString(json:getObject(json:toObject(payload), '$.issue'), '$.number') as number
+insert into IssuesCommentStream;
+
+from IssuesCommentStream as I 
+    join PullRequestPayload as P 
+    on I.number == P.number and I.action == 'created'
+select
+    I.action as action,
+    I.number as number
+insert into PullRequestPayload;
+
+-- Get action and number from pull request issue and insert into PullRequestPayload stream --
+from Events[type == 'PullRequestEvent']
+select 
+    json:getString(json:toObject(payload), '$.action') as action,
+    json:getString(json:toObject(payload), '$.number') as number
+insert into PullRequestPayload;
+
+
+-- Join Payload stream and CamundaInput stream and send message to Camunda process with given instance ID --
+-- Begin implementation --
+from IssuesPayload as I 
+    join CamundaIssueStream as C 
+    on I.title == C.issueName and I.action == 'opened'
+select 
+    C.instanceID as instanceId, 
+    'implementation begun' as message
+insert into MessageStream;
+
+-- Pull request has been opened for review --
+from PullRequestPayload as P 
+    join CamundaPullRequestStream as C 
+    on P.number == C.requestNum and (P.action == 'opened')
+select
+    C.instanceID as instanceId,
+    'receive review request' as message
+insert into MessageStream;
+
+-- Pull request has been reviewed --
+from PullRequestPayload as P 
+    join CamundaPullRequestStream as C 
+    on P.number == C.requestNum and (P.action == 'closed' or P.action == 'created')
+select
+    C.instanceID as instanceId,
+    'receive review request' as message
+insert into MessageStream;
