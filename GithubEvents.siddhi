@@ -1,6 +1,5 @@
 @App:name("GithubEvents")
 
-
 -- STREAMS --
 
 -- Stream that catches any non-issue events from GitHub --
