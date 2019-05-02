@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_0lebug2" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="3.0.1">
   <bpmn:collaboration id="Collaboration_1qz9hws">
-    <bpmn:participant id="Participant_0rnrbao" name="Tester" processRef="TeamLeader" />
+    <bpmn:participant id="Participant_0rnrbao" name="Tester" processRef="Tester" />
     <bpmn:participant id="Participant_0193x73" name="Developer" processRef="Developer" />
     <bpmn:participant id="Participant_1etw1gw" name="Reviewer" processRef="Reviewer" />
     <bpmn:messageFlow id="MessageFlow_1ohs0zu" sourceRef="EndEvent_0l5zlc7" targetRef="IntermediateCatchEvent_16p9bm5" />
     <bpmn:messageFlow id="MessageFlow_09gnv2e" sourceRef="EndEvent_1f675zc" targetRef="IntermediateThrowEvent_1uyu95v" />
     <bpmn:messageFlow id="MessageFlow_1njcvdw" sourceRef="Task_1cz016i" targetRef="StartEvent_1kag3mf" />
   </bpmn:collaboration>
-  <bpmn:process id="TeamLeader" isExecutable="true">
+  <bpmn:process id="Tester" isExecutable="true">
     <bpmn:laneSet id="LaneSet_0paf96m">
       <bpmn:lane id="Lane_0d46lqw">
         <bpmn:flowNodeRef>EndEvent_0l5zlc7</bpmn:flowNodeRef>
@@ -23,7 +23,7 @@
         <bpmn:extensionElements>
           <camunda:connector>
             <camunda:inputOutput>
-              <camunda:inputParameter name="url">http://localhost:8083/GithubEvents/Camunda/Issue</camunda:inputParameter>
+              <camunda:inputParameter name="url">http://localhost:8081/GithubEvents/Camunda/Issue</camunda:inputParameter>
               <camunda:inputParameter name="method">POST</camunda:inputParameter>
               <camunda:inputParameter name="headers">
                 <camunda:map>
@@ -32,7 +32,7 @@
               </camunda:inputParameter>
               <camunda:inputParameter name="payload">{"instanceID":"${execution.getProcessInstanceId()}", "issueName":"${IssueName}"}</camunda:inputParameter>
             </camunda:inputOutput>
-            <camunda:connectorId>submit-issue-connector</camunda:connectorId>
+            <camunda:connectorId>http-connector</camunda:connectorId>
           </camunda:connector>
         </bpmn:extensionElements>
       </bpmn:messageEventDefinition>
@@ -93,7 +93,7 @@
       <bpmn:extensionElements>
         <camunda:connector>
           <camunda:inputOutput>
-            <camunda:inputParameter name="url">http://localhost:8080/GithubEvents/Camunda/PullRequest</camunda:inputParameter>
+            <camunda:inputParameter name="url">http://localhost:8081/GithubEvents/Camunda/PullRequest</camunda:inputParameter>
             <camunda:inputParameter name="method">POST</camunda:inputParameter>
             <camunda:inputParameter name="headers">
               <camunda:map>
@@ -102,7 +102,7 @@
             </camunda:inputParameter>
             <camunda:inputParameter name="payload">{"instanceID":"${execution.getProcessInstanceId()}", "requestnum":"${pr}"}</camunda:inputParameter>
           </camunda:inputOutput>
-          <camunda:connectorId>submit-pr-connector</camunda:connectorId>
+          <camunda:connectorId>http-connector</camunda:connectorId>
         </camunda:connector>
       </bpmn:extensionElements>
       <bpmn:incoming>SequenceFlow_1x3fgsw</bpmn:incoming>
@@ -192,7 +192,7 @@
         <bpmn:extensionElements>
           <camunda:connector>
             <camunda:inputOutput>
-              <camunda:inputParameter name="url">http://localhost:8080/GithubEvents/Camunda/PullRequest</camunda:inputParameter>
+              <camunda:inputParameter name="url">http://localhost:8081/GithubEvents/Camunda/PullRequest</camunda:inputParameter>
               <camunda:inputParameter name="method">POST</camunda:inputParameter>
               <camunda:inputParameter name="headers">
                 <camunda:map>
@@ -201,7 +201,7 @@
               </camunda:inputParameter>
               <camunda:inputParameter name="payload">{"instanceID":"${execution.getProcessInstanceId()}", "requestnum":"${pr}"}</camunda:inputParameter>
             </camunda:inputOutput>
-            <camunda:connectorId>feedback-connector</camunda:connectorId>
+            <camunda:connectorId>http-connector</camunda:connectorId>
           </camunda:connector>
         </bpmn:extensionElements>
       </bpmn:messageEventDefinition>
