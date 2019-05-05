@@ -8,9 +8,9 @@
 define stream CamundaIssueStream(instanceID string, issueName string);
 
 @source(type = 'http', receiver.url = 'http://localhost:8081/GithubEvents/Camunda/PullRequest', 
-	@map(type = 'json'))
+	@map(type = 'json', fail.on.missing.attribute  = "false"))
 @sink(type='log') 
-define stream CamundaPullRequestStream(instanceID string, requestnum string);
+define stream CamundaPullRequestStream(instanceID string, requestnum string, feedback string);
 
 -- Stream that catches any non-issue events from GitHub --
 @source(type = 'http', receiver.url = 'http://localhost:8081/GithubEvents/Github/Events', 
@@ -122,8 +122,9 @@ define stream Issues (
 -- Send message to Camunda --
 @sink(type = 'http',
 	publisher.url = 'http://127.0.0.1:8080/engine-rest/message',
-	@map(type = 'json'),
-	@payload("""{"messageName":"{{message}}","processInstanceId" : "{{instanceId}}"}"""))
+	header = "'Host:http://127.0.0.1:8080",
+	@map(type = 'json', 
+	@payload("""{"messageName":"{{message}}","processInstanceId" : "{{instanceId}}"}""")))
 @sink(type='log') 
 define stream MessageStream(instanceId string, message string);
 
@@ -173,28 +174,28 @@ insert into PullRequestPayload;
 
 -- Join Payload stream and CamundaInput stream and send message to Camunda process with given instance ID --
 -- Begin implementation --
-from IssuesPayload as I 
- join CamundaIssueStream as C 
- 	on I.title == C.issueName and I.action == 'opened'
+from IssuesPayload[action == 'opened']#window.time(10min)
+ join CamundaIssueStream
+ 	on title == issueName
 select 
- C.instanceID as instanceId, 
- 'implementation begun' as message
+ instanceID as instanceId, 
+ 'begin implementation' as message
 insert into MessageStream;
 
 -- Pull request has been opened for review --
-from PullRequestPayload as P 
- join CamundaPullRequestStream as C 
- 	on P.number == C.requestnum and (P.action == 'opened')
+from PullRequestPayload[action == 'opened']#window.time(10min)
+ join CamundaPullRequestStream[feedback != 'yes']#window.time(10min)
+ 	on number == requestnum
 select
- C.instanceID as instanceId,
+ instanceID as instanceId,
  'receive review request' as message
 insert into MessageStream;
 
 -- Pull request has been reviewed --
-from PullRequestPayload as P 
- join CamundaPullRequestStream as C 
- 	on P.number == C.requestnum and (P.action == 'closed' or P.action == 'created')
+from PullRequestPayload[action == 'closed' or action == 'created']#window.time(10min)
+ join CamundaPullRequestStream[feedback == 'yes']#window.time(10min) 
+ 	on number == requestnum
 select
- C.instanceID as instanceId,
- 'receive feedback' as message
+ instanceID as instanceId,
+ 'feedback received' as message
 insert into MessageStream;
