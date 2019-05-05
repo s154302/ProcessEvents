@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_0lebug2" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="3.0.1">
   <bpmn:collaboration id="Collaboration_1qz9hws">
-    <bpmn:participant id="Participant_0rnrbao" name="Tester" processRef="TeamLeader" />
+    <bpmn:participant id="Participant_0rnrbao" name="Tester" processRef="Tester" />
     <bpmn:participant id="Participant_0193x73" name="Developer" processRef="Developer" />
     <bpmn:participant id="Participant_1etw1gw" name="Reviewer" processRef="Reviewer" />
     <bpmn:messageFlow id="MessageFlow_1ohs0zu" sourceRef="EndEvent_0l5zlc7" targetRef="IntermediateCatchEvent_16p9bm5" />
     <bpmn:messageFlow id="MessageFlow_09gnv2e" sourceRef="EndEvent_1f675zc" targetRef="IntermediateThrowEvent_1uyu95v" />
     <bpmn:messageFlow id="MessageFlow_1njcvdw" sourceRef="Task_1cz016i" targetRef="StartEvent_1kag3mf" />
   </bpmn:collaboration>
-  <bpmn:process id="TeamLeader" isExecutable="true">
+  <bpmn:process id="Tester" isExecutable="true">
     <bpmn:laneSet id="LaneSet_0paf96m">
       <bpmn:lane id="Lane_0d46lqw">
         <bpmn:flowNodeRef>StartEvent_07j576o</bpmn:flowNodeRef>
@@ -211,7 +211,7 @@
                   <camunda:entry key="Content-Type">application/json</camunda:entry>
                 </camunda:map>
               </camunda:inputParameter>
-              <camunda:inputParameter name="payload">{"instanceID":"${execution.getProcessInstanceId()}", "requestnum":"${pr}"}</camunda:inputParameter>
+              <camunda:inputParameter name="payload">{"instanceID":"${execution.getProcessInstanceId()}", "requestnum":"${pr}", "feedback":"yes"}</camunda:inputParameter>
             </camunda:inputOutput>
             <camunda:connectorId>http-connector</camunda:connectorId>
           </camunda:connector>
@@ -225,7 +225,7 @@
   <bpmn:message id="Message_01bbhfz" name="give feedback" />
   <bpmn:message id="Message_0fh8s37" name="request review" />
   <bpmn:message id="Message_1xwiwn8" name="issue submitted" />
-  <bpmn:message id="Message_0000l6q" name="receive feedback" />
+  <bpmn:message id="Message_0000l6q" name="feedback received" />
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_1qz9hws">
       <bpmndi:BPMNShape id="Participant_0rnrbao_di" bpmnElement="Participant_0rnrbao" isHorizontal="true">
