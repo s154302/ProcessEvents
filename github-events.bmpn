@@ -5,8 +5,8 @@
     <bpmn:participant id="Participant_0193x73" name="Developer" processRef="Developer" />
     <bpmn:participant id="Participant_1etw1gw" name="Reviewer" processRef="Reviewer" />
     <bpmn:messageFlow id="MessageFlow_1ohs0zu" sourceRef="EndEvent_0l5zlc7" targetRef="IntermediateCatchEvent_16p9bm5" />
-    <bpmn:messageFlow id="MessageFlow_09gnv2e" sourceRef="EndEvent_1f675zc" targetRef="IntermediateThrowEvent_1uyu95v" />
     <bpmn:messageFlow id="MessageFlow_1njcvdw" sourceRef="Task_1cz016i" targetRef="StartEvent_1kag3mf" />
+    <bpmn:messageFlow id="MessageFlow_1kclznz" sourceRef="EndEvent_1f675zc" targetRef="IntermediateThrowEvent_1uyu95v" />
   </bpmn:collaboration>
   <bpmn:process id="Tester" isExecutable="true">
     <bpmn:laneSet id="LaneSet_0paf96m">
@@ -81,12 +81,6 @@
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="SequenceFlow_0ulxi1l" sourceRef="Task_0w2l85b" targetRef="EndEvent_17622sm" />
     <bpmn:sequenceFlow id="SequenceFlow_1x3fgsw" sourceRef="ExclusiveGateway_0wucld4" targetRef="Task_1cz016i" />
-    <bpmn:sequenceFlow id="SequenceFlow_0t976s2" sourceRef="Task_1cz016i" targetRef="IntermediateThrowEvent_1uyu95v" />
-    <bpmn:intermediateCatchEvent id="IntermediateThrowEvent_1uyu95v" name="feedback received">
-      <bpmn:incoming>SequenceFlow_0t976s2</bpmn:incoming>
-      <bpmn:outgoing>SequenceFlow_1brh1kr</bpmn:outgoing>
-      <bpmn:messageEventDefinition messageRef="Message_0000l6q" />
-    </bpmn:intermediateCatchEvent>
     <bpmn:sendTask id="Task_1cz016i" name="request review">
       <bpmn:extensionElements>
         <camunda:connector>
@@ -104,7 +98,7 @@
         </camunda:connector>
       </bpmn:extensionElements>
       <bpmn:incoming>SequenceFlow_1x3fgsw</bpmn:incoming>
-      <bpmn:outgoing>SequenceFlow_0t976s2</bpmn:outgoing>
+      <bpmn:outgoing>SequenceFlow_164z5yb</bpmn:outgoing>
     </bpmn:sendTask>
     <bpmn:userTask id="Task_0xh4yrv" name="Handle merge conflict">
       <bpmn:incoming>SequenceFlow_0czj7oh</bpmn:incoming>
@@ -179,6 +173,12 @@
       <bpmn:outgoing>SequenceFlow_0czj7oh</bpmn:outgoing>
       <bpmn:outgoing>SequenceFlow_0vadtid</bpmn:outgoing>
     </bpmn:exclusiveGateway>
+    <bpmn:intermediateCatchEvent id="IntermediateThrowEvent_1uyu95v" name="feedback received">
+      <bpmn:incoming>SequenceFlow_164z5yb</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_1brh1kr</bpmn:outgoing>
+      <bpmn:messageEventDefinition messageRef="Message_1sdqlbv" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="SequenceFlow_164z5yb" sourceRef="Task_1cz016i" targetRef="IntermediateThrowEvent_1uyu95v" />
   </bpmn:process>
   <bpmn:process id="Reviewer" isExecutable="true">
     <bpmn:sequenceFlow id="SequenceFlow_01v2duy" sourceRef="StartEvent_1kag3mf" targetRef="Task_0jss6el" />
@@ -200,23 +200,7 @@
     <bpmn:endEvent id="EndEvent_1f675zc" name="feedback given">
       <bpmn:extensionElements />
       <bpmn:incoming>SequenceFlow_1886qlo</bpmn:incoming>
-      <bpmn:messageEventDefinition messageRef="Message_01bbhfz">
-        <bpmn:extensionElements>
-          <camunda:connector>
-            <camunda:inputOutput>
-              <camunda:inputParameter name="url">http://localhost:8081/GithubEvents/Camunda/PullRequest</camunda:inputParameter>
-              <camunda:inputParameter name="method">POST</camunda:inputParameter>
-              <camunda:inputParameter name="headers">
-                <camunda:map>
-                  <camunda:entry key="Content-Type">application/json</camunda:entry>
-                </camunda:map>
-              </camunda:inputParameter>
-              <camunda:inputParameter name="payload">{"instanceID":"${execution.getProcessInstanceId()}", "requestnum":"${pr}", "feedback":"yes"}</camunda:inputParameter>
-            </camunda:inputOutput>
-            <camunda:connectorId>http-connector</camunda:connectorId>
-          </camunda:connector>
-        </bpmn:extensionElements>
-      </bpmn:messageEventDefinition>
+      <bpmn:messageEventDefinition messageRef="Message_01bbhfz" camunda:expression="${execution.getProcessEngineServices().getRuntimeService().createMessageCorrelation(&#34;feedback received&#34;).correlateWithResult()}" />
     </bpmn:endEvent>
   </bpmn:process>
   <bpmn:message id="Message_0d0exor" name="begin implementation" />
@@ -226,6 +210,7 @@
   <bpmn:message id="Message_0fh8s37" name="request review" />
   <bpmn:message id="Message_1xwiwn8" name="issue submitted" />
   <bpmn:message id="Message_0000l6q" name="feedback received" />
+  <bpmn:message id="Message_1sdqlbv" name="feedback received" />
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_1qz9hws">
       <bpmndi:BPMNShape id="Participant_0rnrbao_di" bpmnElement="Participant_0rnrbao" isHorizontal="true">
@@ -346,16 +331,6 @@
       <bpmndi:BPMNShape id="UserTask_1e3qe73_di" bpmnElement="Task_0jss6el">
         <dc:Bounds x="1440" y="826" width="100" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="IntermediateCatchEvent_0zbalfd_di" bpmnElement="IntermediateThrowEvent_1uyu95v">
-        <dc:Bounds x="1610" y="593" width="36" height="36" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="1654" y="604" width="89" height="14" />
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="MessageFlow_09gnv2e_di" bpmnElement="MessageFlow_09gnv2e">
-        <di:waypoint x="1628" y="848" />
-        <di:waypoint x="1628" y="629" />
-      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="SequenceFlow_1brh1kr_di" bpmnElement="SequenceFlow_1brh1kr">
         <di:waypoint x="1628" y="593" />
         <di:waypoint x="1628" y="533" />
@@ -436,10 +411,6 @@
         <di:waypoint x="1352" y="651" />
         <di:waypoint x="1352" y="848" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="SequenceFlow_0t976s2_di" bpmnElement="SequenceFlow_0t976s2">
-        <di:waypoint x="1402" y="611" />
-        <di:waypoint x="1610" y="611" />
-      </bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="StartEvent_0gtmvd8_di" bpmnElement="StartEvent_07j576o">
         <dc:Bounds x="243" y="138" width="36" height="36" />
         <bpmndi:BPMNLabel>
@@ -452,6 +423,20 @@
           <dc:Bounds x="1836" y="395" width="52" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="IntermediateCatchEvent_1778hcw_di" bpmnElement="IntermediateThrowEvent_1uyu95v">
+        <dc:Bounds x="1610" y="593" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1655.5" y="604" width="89" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="MessageFlow_1kclznz_di" bpmnElement="MessageFlow_1kclznz">
+        <di:waypoint x="1628" y="848" />
+        <di:waypoint x="1628" y="629" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_164z5yb_di" bpmnElement="SequenceFlow_164z5yb">
+        <di:waypoint x="1402" y="611" />
+        <di:waypoint x="1610" y="611" />
+      </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>
